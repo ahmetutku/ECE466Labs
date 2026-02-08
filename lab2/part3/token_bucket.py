@@ -36,18 +36,36 @@ class TokenBucket:
         # <-- student portion: implement this -->
         # This function is never called by the sender or the receiver.
         # It is only used to implement TokenBucket's other three functions.
+        now = time.monotonic_ns()
+        dt_ns = now - self.last
+        if dt_ns <= 0:
+            return
+
+        dt_s = dt_ns / 1e9
+        self.tokens = min(self.capacity, self.tokens + self.rate * dt_s)
+        self.last = now
 
     def getWaitingTime(self, target: float):
         """Calculate waiting time (ms) until `target` tokens are available."""
         with self.lock:
             # <-- student portion: implement this -->
-            return 0
+            self.updateNoTokens()
+            target = float(target)
+            if self.tokens >= target:
+                return 0.0
+            if self.rate <= 0:
+                # never fills; "infinite" wait
+                return float("inf")
+            needed = target - self.tokens  # tokens
+            wait_s = needed / self.rate
+            return wait_s * 1000.0
 
     def getNoTokens(self):
         """The current number of tokens"""
         with self.lock:
             # <-- student portions: implement this -->
-            return self.capacity
+            self.updateNoTokens()
+            return self.tokens
 
     def removeTokens(self, target: int):
         """
@@ -55,10 +73,12 @@ class TokenBucket:
         Otherwise, return False.
         """
         with self.lock:
-            # <-- student portions: implement this -->
-            return True
-
-
+            self.updateNoTokens()
+            target = float(target)
+            if self.tokens >= target:
+                self.tokens -= target
+                return True
+            return False
 # ---------------- Main function ----------------
 # You do not need to edit this portion. Run `python3 token_bucket.py -h` to see
 # help information of this script
