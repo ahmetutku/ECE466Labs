@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import socket
 import sys
 import time
@@ -9,7 +10,7 @@ def load_trace(path: str):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            parts = line.split()  # handles tabs or spaces
+            parts = line.split()
             if len(parts) < 3:
                 continue
             seq = int(parts[0])
@@ -36,7 +37,6 @@ def main():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     addr = (dst_ip, dst_port)
 
-    # Use monotonic clock for accurate timing
     t0_trace_ms = rows[0][1]
     t0 = time.monotonic()
 
@@ -47,8 +47,7 @@ def main():
         if sleep_s > 0:
             time.sleep(sleep_s)
 
-        payload = b"a" * size  # exact size bytes
-        sock.sendto(payload, addr)
+        sock.sendto(b"a" * size, addr)
 
     sock.close()
 
