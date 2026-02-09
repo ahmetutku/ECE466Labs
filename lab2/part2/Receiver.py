@@ -1,35 +1,48 @@
+#!/usr/bin/env python3
+"""
+ECE466 Lab 2a - UDP receiver/sink (Part 2 / used for Part 3)
+
+Logs each arrival as:
+  elapsed_us <TAB> pkt_len
+
+Usage:
+  python3 Receiver_fixed.py <listen_port> <outfile>
+
+Example (sink for token bucket forwarding to 5555):
+  python3 Receiver_fixed.py 5555 sink.log
+"""
 import socket
-import time
 import sys
+import time
 
-# Create a UDP socket bound to port 4444
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind(("", 4444))   # "" means all local interfaces
+def main():
+    if len(sys.argv) != 3:
+        print(f"Usage: {sys.argv[0]} <listen_port> <outfile>")
+        sys.exit(1)
 
-print("Waiting for a message on UDP port 4444 ...")
+    listen_port = int(sys.argv[1])
+    outfile = sys.argv[2]
 
-results = []
-starttime = -1
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(("", listen_port))
 
-try:
-    while True:
-        data, addr = sock.recvfrom(1024)  # assuming up to 1024 bytes
-        #message = data.decode('utf-8')  # Decode bytes to string
+    print(f"Waiting for UDP on port {listen_port} ... (Ctrl+C to stop)")
 
-        t = time.time()
+    t0 = None
+    with open(outfile, "w") as f:
+        f.write("elapsed_us\tpkt_len\n")
+        try:
+            while True:
+                data, addr = sock.recvfrom(65535)  # don't truncate
+                now = time.monotonic_ns()
+                if t0 is None:
+                    t0 = now
+                elapsed_us = (now - t0) // 1000
+                f.write(f"{elapsed_us}\t{len(data)}\n")
+        except KeyboardInterrupt:
+            pass
+        finally:
+            sock.close()
 
-        if starttime == -1:
-            starttime = t
-            toadd = (len(data), 0)
-        else:
-            toadd = (len(data), t - starttime)
-            starttime = t
-
-        results.append(toadd)
-
-        #print(f"Received '{message}' from {addr}")
-except KeyboardInterrupt:
-    with open('output.txt', 'w') as file:
-        for size, time_s in results:
-            file.write(f'{size}\t{time_s*1000}\n')
-    sys.exit(0)
+if __name__ == "__main__":
+    main()

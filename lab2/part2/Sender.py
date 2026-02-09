@@ -2,30 +2,55 @@ import socket
 import sys
 import time
 
-host = sys.argv[1]
+def load_trace(path: str):
+    rows = []
+    with open(path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split()  # handles tabs or spaces
+            if len(parts) < 3:
+                continue
+            seq = int(parts[0])
+            rel_ms = float(parts[1])
+            size = int(parts[2])
+            rows.append((seq, rel_ms, size))
+    rows.sort(key=lambda x: x[1])
+    return rows
 
-addr = (host, 4444)
+def main():
+    if len(sys.argv) != 4:
+        print(f"Usage: {sys.argv[0]} <dst_ip> <dst_port> <tracefile>")
+        sys.exit(1)
 
-with open('poisson-lab2a.data', 'r') as file:
-    lines = [[int(j) for j in i.strip().split('\t')] for i in file.readlines()]
+    dst_ip = sys.argv[1]
+    dst_port = int(sys.argv[2])
+    tracefile = sys.argv[3]
 
-# Create a UDP socket
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rows = load_trace(tracefile)
+    if not rows:
+        print("Trace file empty or unreadable.")
+        sys.exit(1)
 
-starttime = -1
-for _, rel_ms, size in lines:
-    if starttime == -1:
-        starttime = time.time()
-    else:
-        sendtime = starttime + rel_ms/1000
-        t = time.time()
-        
-        while sendtime > t:
-            time.sleep(max(sendtime - t, 0))
-            t = time.time()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    addr = (dst_ip, dst_port)
 
-    message = 'a'*size
-    message = message.encode('utf-8')  # convert string to bytes
-    sock.sendto(message, addr)  # Send the datagram
+    # Use monotonic clock for accurate timing
+    t0_trace_ms = rows[0][1]
+    t0 = time.monotonic()
 
-sock.close()
+    for _, rel_ms, size in rows:
+        target_s = (rel_ms - t0_trace_ms) / 1000.0
+        now_s = time.monotonic() - t0
+        sleep_s = target_s - now_s
+        if sleep_s > 0:
+            time.sleep(sleep_s)
+
+        payload = b"a" * size  # exact size bytes
+        sock.sendto(payload, addr)
+
+    sock.close()
+
+if __name__ == "__main__":
+    main()
