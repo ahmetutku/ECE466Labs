@@ -79,6 +79,8 @@ class TokenBucket:
                 self.tokens -= target
                 return True
             return False
+        
+
 # ---------------- Main function ----------------
 # You do not need to edit this portion. Run `python3 token_bucket.py -h` to see
 # help information of this script

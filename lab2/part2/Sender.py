@@ -4,10 +4,6 @@ import time
 import argparse
 
 
-# ============================================================
-# Part 2: Poisson trace sender (Lab 2, Part 2)
-#   Format: seq  time_ms  size_bytes
-# ============================================================
 def parse_poisson(parts):
     if len(parts) < 3:
         return None
@@ -15,11 +11,6 @@ def parse_poisson(parts):
     size = int(parts[2])
     return rel_ms, size
 
-
-# ============================================================
-# Part 3-c: Video trace sender (Lab 1 movie trace)
-#   Common format: seq  time_ms  frameType  size_bytes
-# ============================================================
 def parse_video(parts):
     if len(parts) < 4:
         return None
@@ -28,14 +19,10 @@ def parse_video(parts):
     return rel_ms, size
 
 
-# ============================================================
-# Part 3-c: Ethernet trace sender (Lab 1 Ethernet trace)
-#   Format varies by lab version; this covers common cases
-# ============================================================
+
 def parse_ethernet(parts):
-    # Bellcore Ethernet trace: time(sec)  size(bytes)
     if len(parts) >= 2:
-        rel_ms = float(parts[0]) * 1000.0  # seconds -> milliseconds
+        rel_ms = float(parts[0]) * 1000.0 
         size = int(parts[1])
         return rel_ms, size
     return None
@@ -59,7 +46,6 @@ def parse_line(tracefile, line):
     if tracefile.endswith("BC-pAug89.TL") or tracefile.endswith("BC-pAug89.TL.Z"):
         return parse_ethernet(parts)
 
-    # fallback (assume poisson-style)
     return parse_poisson(parts)
 
 
@@ -74,7 +60,6 @@ def main():
                     help="Limit number of trace entries (used in Part 3-c)")
     args = ap.parse_args()
 
-    # Load trace
     rows = []
     with open(args.tracefile, "r") as f:
         for line in f:
