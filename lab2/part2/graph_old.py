@@ -5,7 +5,9 @@ with open('poisson-lab2a.data', 'r') as file:
     real = [[float(j) for j in i.strip().split('\t')] for i in file.readlines()]
 
 with open('output.txt', 'r') as file:
-    sim = [[float(j) for j in i.strip().split('\t')] for i in file.readlines()]
+    sim = [[float(j) for j in i.strip().split('\t')] for i in file.readlines()[1:]]
+    sim = [[i[1], i[0]/1000] for i in sim]
+
 
 int_sim = []
 intt = 0
@@ -50,25 +52,4 @@ plt.bar(bins, real_data, alpha=0.5, label='real')
 plt.legend()
 plt.xlabel("time (ms)")
 plt.ylabel("acc.size (B)")
-plt.show()
-
-
-
-improvements = []
-
-with open('output.txt', 'r') as file:
-    sim_new = [[float(j) for j in i.strip().split('\t')] for i in file.readlines()]
-with open('output_old.txt', 'r') as file:
-    sim_old = [[float(j) for j in i.strip().split('\t')] for i in file.readlines()]
-
-for new, old in zip(sim_new, sim_old):
-    improvements.append(new[1] - old[1])
-
-
-plt.figure(figsize=(8, 4))
-plt.fill_between(range(len(sim_new)), improvements, step="post")
-plt.title("Delay difference between improved and old configuration")
-plt.xlabel("Packet")
-plt.ylabel("time (ms)")
-plt.tight_layout()
 plt.show()
