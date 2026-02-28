@@ -53,6 +53,7 @@ class TokenBucketReceiver (threading.Thread):
             tokens = bucket.getNoTokens()  # the number of tokens, in bytes
             # Record arrival:
             self.log.write(f"{elapsed}\t{packet_size}\t{backlog}\t{tokens}\n")
+            self.log.flush()
 
             lastTime = now  # update last received time
 

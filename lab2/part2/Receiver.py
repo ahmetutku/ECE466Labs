@@ -28,6 +28,7 @@ def main():
                     delta_us = (now - last) // 1000
                 last = now
                 f.write(f"{delta_us}\t{len(data)}\n")
+                f.flush()
         except KeyboardInterrupt:
             pass
         finally:

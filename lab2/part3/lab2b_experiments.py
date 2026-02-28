@@ -35,6 +35,10 @@ SCENARIOS = [
 ]
 
 
+def mbps_to_bytes_per_sec(mbps):
+    return int((mbps * 1_000_000.0) / 8.0)
+
+
 def ensure_dirs():
     os.makedirs(PLOTS_DIR, exist_ok=True)
 
@@ -311,7 +315,7 @@ def determine_max_supported_rate(bucket_rate_mbps=10.0):
             tb_proc = run_cmd([
                 "python3", TOKEN_BUCKET_PY,
                 str(in_port), "127.0.0.1", str(sink_port),
-                "1250", str(int(bucket_rate_mbps * 1_000_000 / 8.0)),
+                "1250", str(mbps_to_bytes_per_sec(bucket_rate_mbps)),
                 "--max-packet-size", "1250",
                 "--logfile", tb_log,
             ], cwd=PART3_DIR)
@@ -350,7 +354,7 @@ def run_exercise_2c(bucket_rate_mbps=10.0):
         tb_proc = run_cmd([
             "python3", TOKEN_BUCKET_PY,
             str(in_port), "127.0.0.1", str(sink_port),
-            "1250", str(int(bucket_rate_mbps * 1_000_000 / 8.0)),
+            "1250", str(mbps_to_bytes_per_sec(bucket_rate_mbps)),
             "--max-packet-size", "1250",
             "--logfile", tb_log,
         ], cwd=PART3_DIR)
@@ -411,7 +415,7 @@ def main():
             run_exercise_2b_scenario(
                 scenario,
                 packet_count=args.count,
-                bucket_rate_bytes_per_sec=int(args.bucket_rate_mbps * 1_000_000 / 8.0),
+                bucket_rate_bytes_per_sec=mbps_to_bytes_per_sec(args.bucket_rate_mbps),
                 bucket_size_bytes=1250,
             )
 
