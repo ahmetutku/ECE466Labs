@@ -22,10 +22,10 @@ class TokenBucket:
         :param size: maximum tokens allowed in the bucket, in tokens
         :param rate: token refill rate in tokens/second
         """
-        self.capacity = size  # the bucket capacity, in tokens
-        self.rate = rate      # the bucket filling rate, in tokens/second
-        self.tokens = size    # the current number of tokens, in tokens
-        self.last = time.monotonic_ns()  # last update time, in nanoseconds
+        self.capacity = float(size)        # the bucket capacity, in tokens
+        self.rate = float(rate)             # the bucket filling rate, in tokens/second
+        self.currentTokens = float(size)    # current tokens, in tokens
+        self.lastUpdateTime = time.monotonic()  # last update time, in seconds
         self.lock = threading.Lock()
 
     def updateNoTokens(self):
@@ -36,36 +36,32 @@ class TokenBucket:
         # <-- student portion: implement this -->
         # This function is never called by the sender or the receiver.
         # It is only used to implement TokenBucket's other three functions.
-        now = time.monotonic_ns()
-        dt_ns = now - self.last
-        if dt_ns <= 0:
+        now = time.monotonic()
+        elapsed = now - self.lastUpdateTime
+        if elapsed <= 0:
             return
-
-        dt_s = dt_ns / 1e9
-        self.tokens = min(self.capacity, self.tokens + self.rate * dt_s)
-        self.last = now
+        generated = self.rate * elapsed
+        self.currentTokens = min(self.capacity, self.currentTokens + generated)
+        self.lastUpdateTime = now
 
     def getWaitingTime(self, target: float):
         """Calculate waiting time (ms) until `target` tokens are available."""
         with self.lock:
-            # <-- student portion: implement this -->
             self.updateNoTokens()
             target = float(target)
-            if self.tokens >= target:
+            if self.currentTokens >= target:
                 return 0.0
             if self.rate <= 0:
-                # never fills; "infinite" wait
                 return float("inf")
-            needed = target - self.tokens  # tokens
-            wait_s = needed / self.rate
+            deficit = target - self.currentTokens
+            wait_s = deficit / self.rate
             return wait_s * 1000.0
 
     def getNoTokens(self):
         """The current number of tokens"""
         with self.lock:
-            # <-- student portions: implement this -->
             self.updateNoTokens()
-            return self.tokens
+            return self.currentTokens
 
     def removeTokens(self, target: int):
         """
@@ -75,8 +71,8 @@ class TokenBucket:
         with self.lock:
             self.updateNoTokens()
             target = float(target)
-            if self.tokens >= target:
-                self.tokens -= target
+            if self.currentTokens >= target:
+                self.currentTokens -= target
                 return True
             return False
         
