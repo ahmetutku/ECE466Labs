@@ -3,6 +3,23 @@ import socket
 import sys
 import time
 
+
+def parse_trace_line(parts, prev_timestamp_us):
+    if len(parts) == 1:
+        return int(parts[0]), 1000, prev_timestamp_us
+
+    if len(parts) == 2:
+        return int(parts[0]), int(parts[1]), prev_timestamp_us
+
+    timestamp_us = int(parts[1])
+    packet_size = int(parts[2])
+    if prev_timestamp_us is None:
+        delay_us = 0
+    else:
+        delay_us = max(0, timestamp_us - prev_timestamp_us)
+    return delay_us, packet_size, timestamp_us
+
+
 def main():
     if len(sys.argv) != 4:
         print(f"Usage: {sys.argv[0]} <dest_ip> <dest_port> <tracefile>")
@@ -13,6 +30,7 @@ def main():
     tracefile = sys.argv[3]
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    prev_timestamp_us = None
 
     with open(tracefile, "r") as f:
         for line in f:
@@ -22,16 +40,9 @@ def main():
                 continue
 
             parts = line.split()
-
-            # Case 1: only delay provided
-            if len(parts) == 1:
-                delay_us = int(parts[0])
-                pkt_size = 1000
-
-            # Case 2: delay and packet size
-            else:
-                delay_us = int(parts[0])
-                pkt_size = int(parts[1])
+            delay_us, pkt_size, prev_timestamp_us = parse_trace_line(
+                parts, prev_timestamp_us
+            )
 
             # wait before sending next packet
             time.sleep(delay_us / 1_000_000)
