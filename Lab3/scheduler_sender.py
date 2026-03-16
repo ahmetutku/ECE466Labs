@@ -3,6 +3,7 @@ import time
 import socket
 from byte_queue import ByteQueue
 from evaluation_logger import EvaluationLogger
+from priority_stats import PriorityStats
 
 
 class SchedulerSender(threading.Thread):
@@ -12,7 +13,7 @@ class SchedulerSender(threading.Thread):
     """
 
     def __init__(self, buffers: list[ByteQueue], rate: float, dst_addr,
-                 eval_logger: EvaluationLogger):
+                 eval_logger: EvaluationLogger, priority_stats: PriorityStats):
         """
         :param buffers: shared buffers
         :param rate: assigned transmission rate, in bps
@@ -23,6 +24,7 @@ class SchedulerSender(threading.Thread):
         self.rate = rate        # transmission rate
         self.dst_addr: socket._Address = dst_addr  # destination address
         self.eval_logger = eval_logger
+        self.priority_stats = priority_stats
 
     def run(self):
         # Extract `self` members
@@ -31,6 +33,7 @@ class SchedulerSender(threading.Thread):
         rate_recp = 8e9/self.rate       # 1/rate, in ns / byte
         dst_addr = self.dst_addr
         eval_logger = self.eval_logger
+        priority_stats = self.priority_stats
         # outbound socket for sending packets
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # completion time of the previous packet
@@ -42,8 +45,13 @@ class SchedulerSender(threading.Thread):
             arrival_time = time.monotonic_ns()
             nonempty.release()  # Return the token to keep the value accurate.
 
-            # FIFO scheduler: the single shared queue preserves arrival order.
-            record = buffers[0].get()
+            # Non-preemptive priority: choose high queue first, otherwise low queue.
+            if not buffers[0].is_empty():
+                record = buffers[0].get()
+                queue_name = "high"
+            else:
+                record = buffers[1].get()
+                queue_name = "low"
             packet = record["data"]
             packet_length = record["packet_size_bytes"]
 
@@ -60,4 +68,10 @@ class SchedulerSender(threading.Thread):
             departure_ns = tx_start_ns + int(packet_length * rate_recp)
             sock.sendto(packet, dst_addr)
             eval_logger.log_departure(record, departure_ns)
+            priority_stats.note_transmitted(record.get("is_high", False))
+            print(
+                f"transmit queue={queue_name} tag=0x{record.get('source_tag', -1):02x} "
+                f"len={packet_length} high_backlog={buffers[0].backlog()} "
+                f"low_backlog={buffers[1].backlog()}"
+            )
             prev_complete = departure_ns

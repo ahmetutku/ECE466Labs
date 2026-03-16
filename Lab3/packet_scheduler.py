@@ -6,9 +6,10 @@ from scheduler_sender import SchedulerSender
 from scheduler_receiver import SchedulerReceiver
 from byte_queue import ByteQueue
 from evaluation_logger import EvaluationLogger
+from priority_stats import PriorityStats
 
 FIFO_BUFFER_BYTES = 100_000
-FIFO_LINK_BPS = 10_000_000
+FIFO_LINK_BPS = 20_000_000
 
 
 class PacketScheduler:
@@ -16,22 +17,34 @@ class PacketScheduler:
                  link_capacity: float, max_packet_size: int,
                  buffer_capacities: list[int], fileName):
         nonempty = threading.Semaphore(0)
-        # Exercise 1-b uses a single FIFO queue with fixed buffer capacity.
-        fifo_capacity = buffer_capacities[0] if buffer_capacities else FIFO_BUFFER_BYTES
+        high_capacity = buffer_capacities[0] if len(buffer_capacities) >= 1 else FIFO_BUFFER_BYTES
+        low_capacity = buffer_capacities[1] if len(buffer_capacities) >= 2 else FIFO_BUFFER_BYTES
         fifo_rate = link_capacity if link_capacity else FIFO_LINK_BPS
-        buffers = [ByteQueue(fifo_capacity, nonempty)]
+        buffers = [
+            ByteQueue(high_capacity, nonempty),
+            ByteQueue(low_capacity, nonempty),
+        ]
         eval_logger = EvaluationLogger(fileName)
+        priority_stats = PriorityStats()
         self.sender = SchedulerSender(
-            buffers, fifo_rate, (out_ip, out_port), eval_logger)
+            buffers, fifo_rate, (out_ip, out_port), eval_logger, priority_stats)
         self.receiver = SchedulerReceiver(
-            buffers, in_port, max_packet_size, eval_logger)
+            buffers, in_port, max_packet_size, eval_logger, priority_stats)
+        self.priority_stats = priority_stats
 
     def start(self):
         self.sender.start()
         self.receiver.start()
 
-        self.sender.join()
-        self.receiver.join()
+        try:
+            self.sender.join()
+            self.receiver.join()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            print("Priority scheduler summary:")
+            for line in self.priority_stats.summary_lines():
+                print(line)
 
 
 # ---------------- Main function ----------------

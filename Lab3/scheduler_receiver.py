@@ -2,6 +2,10 @@ import threading
 import socket
 from byte_queue import ByteQueue
 from evaluation_logger import EvaluationLogger
+from priority_stats import PriorityStats
+
+HIGH_PRIORITY_TAG = 0x02
+LOW_PRIORITY_TAG = 0x01
 
 
 class SchedulerReceiver (threading.Thread):
@@ -15,7 +19,8 @@ class SchedulerReceiver (threading.Thread):
     """
 
     def __init__(self, buffers: list[ByteQueue],
-                 port: int, max_pkt_size: int, eval_logger: EvaluationLogger):
+                 port: int, max_pkt_size: int, eval_logger: EvaluationLogger,
+                 priority_stats: PriorityStats):
         """
         :param buffers: shared buffers
         :param port: UDP port to bind for input
@@ -27,6 +32,7 @@ class SchedulerReceiver (threading.Thread):
         self.port = port                  # listening port number
         self.max_pkt_size = max_pkt_size  # maximum packet size, in bytes
         self.eval_logger = eval_logger
+        self.priority_stats = priority_stats
 
     def run(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -48,21 +54,29 @@ class SchedulerReceiver (threading.Thread):
                 print(f"{noDropped}) Packet too large, dropped")
                 continue
 
-            # <-- student portion: classify packets into appropriate queues -->
-            # FIFO scheduler: every packet goes into the single arrival-order queue.
-            buffer = buffers[0]
+            tag = packet[0] if packet else -1
+            is_high = tag == HIGH_PRIORITY_TAG
+            if tag == LOW_PRIORITY_TAG:
+                is_high = False
+            buffer_index = 0 if is_high else 1
+            buffer = buffers[buffer_index]
             backlog_bytes = buffer.backlog()
+            self.priority_stats.note_classified(is_high)
             record = self.eval_logger.log_arrival(
                 packet_size, backlog_bytes, dropped=False
             )
             record["data"] = packet
+            record["is_high"] = is_high
+            record["source_tag"] = tag
 
             # Enqueue if buffer has enough room; otherwise drop.
             if not buffer.try_put(record):
                 noDropped += 1
                 self.eval_logger.log_drop(record)
+                self.priority_stats.note_dropped(is_high)
                 print(
-                    f"{noDropped}) Buffer full: dropped {packet_size}-byte packet "
+                    f"{noDropped}) Buffer full: dropped {packet_size}-byte "
+                    f"{'high' if is_high else 'low'} packet "
                     f"(occupancy={buffer.backlog()} / {buffer.MAX_BYTES} bytes)"
                 )
                 continue
