@@ -11,21 +11,30 @@ class EvaluationLogger:
         self.next_seq = 0
         self.next_flush = 0
         self.cum_drops = 0
+        self.cum_drops_by_class = {
+            "high": 0,
+            "low": 0,
+            "unknown": 0,
+        }
         self.records = {}
         self.csv_file = open(path, "w", newline="")
         self.writer = csv.writer(self.csv_file)
         self.writer.writerow([
             "arrival_time_s",
             "packet_size_bytes",
+            "priority_class",
+            "source_tag_hex",
             "backlog_bytes",
             "departure_time_s",
             "waiting_time_s",
             "dropped",
             "cum_drops",
+            "cum_drops_class",
         ])
         self.csv_file.flush()
 
-    def log_arrival(self, packet_size: int, backlog_bytes: int, dropped: bool):
+    def log_arrival(self, packet_size: int, backlog_bytes: int, dropped: bool,
+                    priority_class: str = "unknown", source_tag: int | None = None):
         with self.lock:
             seq = self.next_seq
             self.next_seq += 1
@@ -34,6 +43,8 @@ class EvaluationLogger:
                 "seq": seq,
                 "arrival_ns": arrival_ns,
                 "packet_size_bytes": packet_size,
+                "priority_class": priority_class,
+                "source_tag_hex": self._tag_hex(source_tag),
                 "backlog_bytes": backlog_bytes,
                 "departure_time_s": "",
                 "waiting_time_s": "",
@@ -41,10 +52,13 @@ class EvaluationLogger:
             }
             if dropped:
                 self.cum_drops += 1
+                self.cum_drops_by_class[priority_class] += 1
                 record["cum_drops"] = self.cum_drops
+                record["cum_drops_class"] = self.cum_drops_by_class[priority_class]
                 record["complete"] = True
             else:
                 record["cum_drops"] = self.cum_drops
+                record["cum_drops_class"] = self.cum_drops_by_class[priority_class]
                 record["complete"] = False
             self.records[seq] = record
             self._flush_ready()
@@ -62,8 +76,11 @@ class EvaluationLogger:
         with self.lock:
             stored = self.records[record["seq"]]
             self.cum_drops += 1
+            priority_class = stored["priority_class"]
+            self.cum_drops_by_class[priority_class] += 1
             stored["dropped"] = 1
             stored["cum_drops"] = self.cum_drops
+            stored["cum_drops_class"] = self.cum_drops_by_class[priority_class]
             stored["complete"] = True
             self._flush_ready()
 
@@ -75,11 +92,14 @@ class EvaluationLogger:
             self.writer.writerow([
                 self._to_seconds(record["arrival_ns"]),
                 record["packet_size_bytes"],
+                record["priority_class"],
+                record["source_tag_hex"],
                 record["backlog_bytes"],
                 record["departure_time_s"],
                 record["waiting_time_s"],
                 record["dropped"],
                 record["cum_drops"],
+                record["cum_drops_class"],
             ])
             self.csv_file.flush()
             del self.records[self.next_flush]
@@ -87,3 +107,8 @@ class EvaluationLogger:
 
     def _to_seconds(self, timestamp_ns: int) -> float:
         return (timestamp_ns - self.start_ns) / 1e9
+
+    def _tag_hex(self, source_tag: int | None) -> str:
+        if source_tag is None or source_tag < 0:
+            return ""
+        return f"0x{source_tag:02x}"

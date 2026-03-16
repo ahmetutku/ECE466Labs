@@ -50,7 +50,9 @@ class SchedulerReceiver (threading.Thread):
             # Check if the packet size is appropriate
             if packet_size > self.max_pkt_size:
                 noDropped += 1
-                self.eval_logger.log_arrival(packet_size, 0, dropped=True)
+                self.eval_logger.log_arrival(
+                    packet_size, 0, dropped=True, priority_class="unknown", source_tag=None
+                )
                 print(f"{noDropped}) Packet too large, dropped")
                 continue
 
@@ -58,12 +60,17 @@ class SchedulerReceiver (threading.Thread):
             is_high = tag == HIGH_PRIORITY_TAG
             if tag == LOW_PRIORITY_TAG:
                 is_high = False
+            priority_class = "high" if is_high else "low"
             buffer_index = 0 if is_high else 1
             buffer = buffers[buffer_index]
             backlog_bytes = buffer.backlog()
             self.priority_stats.note_classified(is_high)
             record = self.eval_logger.log_arrival(
-                packet_size, backlog_bytes, dropped=False
+                packet_size,
+                backlog_bytes,
+                dropped=False,
+                priority_class=priority_class,
+                source_tag=tag,
             )
             record["data"] = packet
             record["is_high"] = is_high

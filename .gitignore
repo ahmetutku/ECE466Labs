@@ -1,0 +1,6 @@
+
+# Large lab outputs
+*.log
+*.csv
+Lab3/Part2/*.log
+Lab3/Part2/*.csv
