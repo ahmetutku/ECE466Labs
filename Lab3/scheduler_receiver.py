@@ -1,7 +1,7 @@
 import threading
-import time
 import socket
 from byte_queue import ByteQueue
+from Lab3.Part1.part1bc.evaluation_logger import EvaluationLogger
 
 
 class SchedulerReceiver (threading.Thread):
@@ -15,7 +15,7 @@ class SchedulerReceiver (threading.Thread):
     """
 
     def __init__(self, buffers: list[ByteQueue],
-                 port: int, max_pkt_size: int, logfile: str):
+                 port: int, max_pkt_size: int, eval_logger: EvaluationLogger):
         """
         :param buffers: shared buffers
         :param port: UDP port to bind for input
@@ -26,7 +26,7 @@ class SchedulerReceiver (threading.Thread):
         self.buffers = buffers            # shared buffers
         self.port = port                  # listening port number
         self.max_pkt_size = max_pkt_size  # maximum packet size, in bytes
-        self.log = open(logfile, "w")     # log file for packet arrival
+        self.eval_logger = eval_logger
 
     def run(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -36,37 +36,33 @@ class SchedulerReceiver (threading.Thread):
         buffers = self.buffers
 
         noDropped = 0    # the total number of dropped packets
-        lastTime = None  # last received time
         while True:
             # Block until a packet is received.
             packet, _ = sock.recvfrom(65535)
-            now = time.monotonic_ns()
-            if lastTime is None:
-                lastTime = now  # put elapsed=zero in the first line
-
-            # Collecting data for logging
-            elapsed = (now - lastTime)//1000  # time since last arrival, in us
             packet_size = len(packet)         # packet size, in bytes
-            # Log arrival
-            self.log.write(f"{elapsed}\t{packet_size}\t")
-            for buffer in buffers:
-                self.log.write(f"{buffer.backlog()}\t")
-            self.log.write("\n")
-
-            lastTime = now  # update last received time
 
             # Check if the packet size is appropriate
             if packet_size > self.max_pkt_size:
                 noDropped += 1
+                self.eval_logger.log_arrival(packet_size, 0, dropped=True)
                 print(f"{noDropped}) Packet too large, dropped")
                 continue
 
             # <-- student portion: classify packets into appropriate queues -->
-            # Reference implementation always pick buffer 0
+            # FIFO scheduler: every packet goes into the single arrival-order queue.
             buffer = buffers[0]
+            backlog_bytes = buffer.backlog()
+            record = self.eval_logger.log_arrival(
+                packet_size, backlog_bytes, dropped=False
+            )
+            record["data"] = packet
 
             # Enqueue if buffer has enough room; otherwise drop.
-            if not buffer.try_put(packet):
+            if not buffer.try_put(record):
                 noDropped += 1
-                print(f"{noDropped}) Buffer is full, dropped")
+                self.eval_logger.log_drop(record)
+                print(
+                    f"{noDropped}) Buffer full: dropped {packet_size}-byte packet "
+                    f"(occupancy={buffer.backlog()} / {buffer.MAX_BYTES} bytes)"
+                )
                 continue

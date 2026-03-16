@@ -19,32 +19,38 @@ class ByteQueue:
         self.lock = Lock()          # locks for accessing `bytes`
         self.nonempty = nonempty    # the number of non-empty buffers
 
-    def try_put(self, data: bytes):
+    def _item_size(self, item) -> int:
+        if isinstance(item, bytes):
+            return len(item)
+        return int(item["packet_size_bytes"])
+
+    def try_put(self, item):
         """
-        If there is available space, put `data` in the queue and returns True.
+        If there is available space, put `item` in the queue and returns True.
         Otherwise, discard the packet and returns False.
         """
+        item_size = self._item_size(item)
         with self.lock:
-            if self.bytes + len(data) > self.MAX_BYTES:
+            if self.bytes + item_size > self.MAX_BYTES:
                 return False
-            self.bytes += len(data)
-            self.q.append(data)
+            self.bytes += item_size
+            self.q.append(item)
             if len(self.q) == 1:
                 self.nonempty.release()
             return True
 
-    def get(self) -> bytes:
+    def get(self):
         """
-        Return the first packet from the queue,
+        Return the first item from the queue,
         assuming there is at least one packet.
         """
         with self.lock:
-            data: bytes = self.q.popleft()
-            self.bytes -= len(data)
+            item = self.q.popleft()
+            self.bytes -= self._item_size(item)
             if not self.q:
                 # We pop the last packet, it is now empty
                 self.nonempty.acquire(timeout=0.0)
-            return data
+            return item
 
     def peek(self) -> bytes | None:
         """
