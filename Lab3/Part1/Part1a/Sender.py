@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
+import argparse
 import socket
-import sys
 import time
 
 
@@ -21,13 +21,16 @@ def parse_trace_line(parts, prev_timestamp_us):
 
 
 def main():
-    if len(sys.argv) != 4:
-        print(f"Usage: {sys.argv[0]} <dest_ip> <dest_port> <tracefile>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("dest_ip")
+    parser.add_argument("dest_port", type=int)
+    parser.add_argument("tracefile")
+    parser.add_argument("--source-id", type=int, default=None)
+    args = parser.parse_args()
 
-    dest_ip = sys.argv[1]
-    dest_port = int(sys.argv[2])
-    tracefile = sys.argv[3]
+    dest_ip = args.dest_ip
+    dest_port = args.dest_port
+    tracefile = args.tracefile
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     prev_timestamp_us = None
@@ -47,7 +50,12 @@ def main():
             # wait before sending next packet
             time.sleep(delay_us / 1_000_000)
 
-            payload = b"x" * pkt_size
+            if args.source_id is None:
+                payload = b"x" * pkt_size
+            elif pkt_size <= 1:
+                payload = bytes([args.source_id & 0xFF])
+            else:
+                payload = bytes([args.source_id & 0xFF]) + (b"x" * (pkt_size - 1))
             sock.sendto(payload, (dest_ip, dest_port))
 
     sock.close()

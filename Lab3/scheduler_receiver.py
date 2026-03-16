@@ -1,7 +1,7 @@
 import threading
 import socket
 from byte_queue import ByteQueue
-from Lab3.Part1.part1bc.evaluation_logger import EvaluationLogger
+from evaluation_logger import EvaluationLogger
 
 
 class SchedulerReceiver (threading.Thread):

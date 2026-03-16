@@ -5,7 +5,7 @@ import threading
 from scheduler_sender import SchedulerSender
 from scheduler_receiver import SchedulerReceiver
 from byte_queue import ByteQueue
-from Lab3.Part1.part1bc.evaluation_logger import EvaluationLogger
+from evaluation_logger import EvaluationLogger
 
 FIFO_BUFFER_BYTES = 100_000
 FIFO_LINK_BPS = 10_000_000
@@ -17,10 +17,12 @@ class PacketScheduler:
                  buffer_capacities: list[int], fileName):
         nonempty = threading.Semaphore(0)
         # Exercise 1-b uses a single FIFO queue with fixed buffer capacity.
-        buffers = [ByteQueue(FIFO_BUFFER_BYTES, nonempty)]
+        fifo_capacity = buffer_capacities[0] if buffer_capacities else FIFO_BUFFER_BYTES
+        fifo_rate = link_capacity if link_capacity else FIFO_LINK_BPS
+        buffers = [ByteQueue(fifo_capacity, nonempty)]
         eval_logger = EvaluationLogger(fileName)
         self.sender = SchedulerSender(
-            buffers, FIFO_LINK_BPS, (out_ip, out_port), eval_logger)
+            buffers, fifo_rate, (out_ip, out_port), eval_logger)
         self.receiver = SchedulerReceiver(
             buffers, in_port, max_packet_size, eval_logger)
 
