@@ -1,0 +1,21 @@
+3b:
+Tag: 1, Truncated Rate: 3.9457031487009444 Mbps
+Tag: 2, Truncated Rate: 3.9455534528904894 Mbps
+Tag: 3, Truncated Rate: 2.0016233553972933 Mbps
+
+3c:
+Tag: 1, Truncated Rate: 5.929085984391753 Mbps
+Tag: 2, Truncated Rate: 1.9773781063909615 Mbps
+Tag: 3, Truncated Rate: 1.9729510533921788 Mbps
+
+3d_1:
+Tag: 1, Truncated Rate: 4.9442642137700386 Mbps
+Tag: 2, Truncated Rate: 4.9442293396591745 Mbps
+
+3d_2:
+Tag: 1, Truncated Rate: 4.937807097189643 Mbps
+Tag: 2, Truncated Rate: 4.942652639816349 Mbps
+
+3d_3:
+Tag: 1, Truncated Rate: 4.935173628223071 Mbps
+Tag: 2, Truncated Rate: 4.943091264316653 Mbps
