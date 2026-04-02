@@ -1,0 +1,1 @@
+There seems to be inaccuracies where multiple packets are received at the same time specifically around 1Mbps timescale while its invisible elsewhere. The 10ms delay is clearly visible and as the rate is infinite, packets are transmitted instantaneously
