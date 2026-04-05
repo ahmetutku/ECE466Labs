@@ -1,0 +1,10 @@
+{
+  "runs": 2,
+  "box": "known_box1",
+  "packet_size_bytes": 700,
+  "train_length": 20,
+  "probing_rates_kbps": [
+    1000.0,
+    1500.0
+  ]
+}

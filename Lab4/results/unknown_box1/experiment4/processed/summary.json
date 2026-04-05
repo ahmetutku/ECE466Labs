@@ -1,0 +1,21 @@
+{
+  "box": "unknown_box1",
+  "packet_size_bytes": 700,
+  "packet_size_bits": 5600,
+  "train_length": 40,
+  "probing_rates_kbps": [
+    500.0,
+    1000.0,
+    1500.0
+  ],
+  "estimated_parameters": {
+    "R_kbps": 1500.0,
+    "T_ms": 16.79587748416834,
+    "b_bits": 8393.816226252628
+  },
+  "B_max_bits": {
+    "500": 11200.0,
+    "1000": 16800.0,
+    "1500": 16800.0
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "box": "known_box1",
+  "baseline_packet_size_bytes": 700,
+  "baseline_train_length": 20,
+  "larger_packet_size_bytes": 1200,
+  "doubled_train_length": 40,
+  "probing_rates_kbps": [
+    1000.0,
+    1500.0
+  ]
+}

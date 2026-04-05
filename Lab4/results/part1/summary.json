@@ -1,0 +1,17 @@
+{
+  "part": 1,
+  "runs": [
+    {
+      "probing_rate_kbps": 1000.0,
+      "matched_packets": 20,
+      "missing_packets": 0,
+      "plot_path": "/Users/ahmethamamcioglu/Desktop/ECE466Labs/Lab4/results/part1/part1_rate_1_1000kbps.png"
+    },
+    {
+      "probing_rate_kbps": 5000.0,
+      "matched_packets": 20,
+      "missing_packets": 0,
+      "plot_path": "/Users/ahmethamamcioglu/Desktop/ECE466Labs/Lab4/results/part1/part1_rate_2_5000kbps.png"
+    }
+  ]
+}
